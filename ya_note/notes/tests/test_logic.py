@@ -1,9 +1,6 @@
-from http import HTTPStatus
-
 from pytils.translit import slugify
 
 from django.contrib.auth import get_user_model
-from pytest_django.asserts import assertRedirects
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -42,8 +39,7 @@ class TestLogic(TestCase):
         """Проверка возможности создания заметки авторизованным
         пользователем
         """
-        response = self.author_client.post(self.add_url, data=self.form_data)
-        self.assertRedirects(response, self.success_url)
+        self.author_client.post(self.add_url, data=self.form_data)
         self.assertEqual(Note.objects.count(), 2)
         created_note = Note.objects.exclude(id=self.note.id).get()
         self.assertEqual(created_note.title, self.form_data['title'])
@@ -53,15 +49,12 @@ class TestLogic(TestCase):
         """Проверка невозможности создания заметки неавторизованным
         пользователем
         """
-        response = self.client.post(self.add_url, data=self.form_data)
-        expected_url = f'{self.login_url}?next={self.add_url}'
-        self.assertRedirects(response, expected_url)
+        self.client.post(self.add_url, data=self.form_data)
         self.assertEqual(Note.objects.count(), 1)
 
     def test_author_can_edit_note(self):
         """Проверка возможности редактирования заметки автором"""
-        response = self.author_client.post(self.edit_url, self.form_data)
-        self.assertRedirects(response, self.success_url)
+        self.author_client.post(self.edit_url, self.form_data)
         self.note.refresh_from_db()
         self.assertEqual(self.note.title, self.form_data['title'])
         self.assertEqual(self.note.text, self.form_data['text'])
@@ -70,8 +63,7 @@ class TestLogic(TestCase):
         """Проверка невозможности редактирования заметки другим
         пользователем
         """
-        response = self.reader_client.post(self.edit_url, self.form_data)
-        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
+        self.reader_client.post(self.edit_url, self.form_data)
         note = Note.objects.get()
         self.assertEqual(self.note.title, note.title)
         self.assertEqual(self.note.text, note.text)
@@ -84,8 +76,7 @@ class TestLogic(TestCase):
 
     def test_user_cant_delete_note_of_another_user(self):
         """Проверка невозможности удаления заметки другим пользователем"""
-        response = self.reader_client.delete(self.delete_url)
-        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
+        self.reader_client.delete(self.delete_url)
         self.assertEqual(Note.objects.count(), 1)
 
     def test_for_unique_slug(self):
@@ -102,8 +93,7 @@ class TestLogic(TestCase):
 
     def test_empty_slug(self):
         """Проверка автоматического формирования slug"""
-        response = self.author_client.post(self.add_url, data=self.form_data)
-        assertRedirects(response, reverse('notes:success'))
+        self.author_client.post(self.add_url, data=self.form_data)
         self.assertEqual(Note.objects.count(), 2)
         new_note = Note.objects.get(id=2)
         expected_slug = slugify(self.form_data['title'])

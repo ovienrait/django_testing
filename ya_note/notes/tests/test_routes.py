@@ -21,52 +21,48 @@ class TestRoutes(TestCase):
             author=cls.author
         )
 
-    def test_pages_availability_for_anonymous_user(self):
-        """Проверка доступности главной страницы, а также страниц
-        регистрации, логина и логаута для неавторизованного пользователя
-        """
-        urls = (
-            ('notes:home', None),
-            ('users:login', None),
-            ('users:logout', None),
-            ('users:signup', None),
+    def test_pages_availability(self):
+        """Проверка доступности страниц"""
+        urls_and_users_statuses = (
+            ('notes:home', None, None, HTTPStatus.OK),
+            ('notes:home', None, self.author, HTTPStatus.OK),
+            ('users:login', None, None, HTTPStatus.OK),
+            ('users:logout', None, self.author, HTTPStatus.OK),
+            ('users:signup', None, None, HTTPStatus.OK),
+            ('notes:add', None, self.author, HTTPStatus.OK),
+            ('notes:list', None, self.author, HTTPStatus.OK),
+            ('notes:success', None, self.author, HTTPStatus.OK),
+            ('notes:edit', (self.note.slug,), self.author, HTTPStatus.OK),
+            (
+                'notes:edit',
+                (self.note.slug,),
+                self.reader,
+                HTTPStatus.NOT_FOUND
+            ),
+            ('notes:detail', (self.note.slug,), self.author, HTTPStatus.OK),
+            (
+                'notes:detail',
+                (self.note.slug,),
+                self.reader,
+                HTTPStatus.NOT_FOUND
+            ),
+            ('notes:delete', (self.note.slug,), self.author, HTTPStatus.OK),
+            (
+                'notes:delete',
+                (self.note.slug,),
+                self.reader,
+                HTTPStatus.NOT_FOUND
+            ),
         )
-        for name, args in urls:
+        for name, args, user, expected_status in urls_and_users_statuses:
             with self.subTest(name=name):
                 url = reverse(name, args=args)
-                response = self.client.get(url)
-                self.assertEqual(response.status_code, HTTPStatus.OK)
-
-    def test_pages_availability_for_authorized_user(self):
-        """Проверка доступности страниц для авторизованного пользователя"""
-        urls = (
-            ('notes:add', None),
-            ('notes:list', None),
-            ('notes:success', None),
-        )
-        for name, args in urls:
-            with self.subTest(name=name):
-                url = reverse(name, args=args)
-                self.client.force_login(self.author)
-                response = self.client.get(url)
-                self.assertEqual(response.status_code, HTTPStatus.OK)
-
-    def test_availability_for_note_detail_edit_delete(self):
-        """Проверка доступности страниц для автора заметок и
-        другого пользователя
-        """
-        users_statuses = (
-            (self.author, HTTPStatus.OK),
-            (self.reader, HTTPStatus.NOT_FOUND),
-        )
-        names = ('notes:edit', 'notes:detail', 'notes:delete')
-        for user, status in users_statuses:
-            self.client.force_login(user)
-            for name in names:
-                with self.subTest(user=user, name=name):
-                    url = reverse(name, args=(self.note.slug,))
+                if user is None:
                     response = self.client.get(url)
-                    self.assertEqual(response.status_code, status)
+                else:
+                    self.client.force_login(user)
+                    response = self.client.get(url)
+                self.assertEqual(response.status_code, expected_status)
 
     def test_redirect_for_anonymous_client(self):
         """Проверка переадресации страниц"""

@@ -16,8 +16,7 @@ def test_news_count(client, name):
     url = reverse(name)
     response = client.get(url)
     object_list = response.context['object_list']
-    news_count = object_list.count()
-    assert news_count == settings.NEWS_COUNT_ON_HOME_PAGE
+    assert object_list.count() == settings.NEWS_COUNT_ON_HOME_PAGE
 
 
 @pytest.mark.parametrize(
